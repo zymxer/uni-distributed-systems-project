@@ -21,11 +21,11 @@ public class Tank : MonoBehaviour
     [Space] [Header("Navigation")] 
     [SerializeField] private float nextPointDistance = 0.1f;
 
-    [FormerlySerializedAs("teamNumber")]
     [Space] [Header("Team")] 
-    [SerializeField] private int _teamNumber;
-    [SerializeField] private int _tankNumber;
-    [SerializeField] private GameObject _flag;
+    private Team2 _team;
+    private int teamNumber;
+    private int tankNumber;
+    [SerializeField] private GameObject flag;
     
     private Timer _shotTimer;
     private Seeker _seeker;
@@ -124,7 +124,17 @@ public class Tank : MonoBehaviour
             _shoots = true;
         }
     }
-    
+
+    public void SetTeam(Team2 team, int tankNumber)
+    {
+        _team = team;
+        this.tankNumber = tankNumber;
+        teamNumber = team.TeamNumber;
+        flag.GetComponent<SpriteRenderer>().color = _team.Color;
+    }
+
+    public int TeamNumber => teamNumber;
+
     private void OnPathGenerationComplete(Path path)
     {
         if (!path.error)
@@ -209,8 +219,11 @@ public class Tank : MonoBehaviour
     {
         if (other.CompareTag("Tank"))
         {
-            //UpdateTarget(other.transform.position);
-            _triggered = true;
+            if (other.GetComponent<Tank>().TeamNumber != teamNumber)
+            {
+                //UpdateTarget(other.transform.position);
+                _triggered = true;   
+            }
         }
     }
 
@@ -218,8 +231,11 @@ public class Tank : MonoBehaviour
     {
         if (other.CompareTag("Tank"))
         {
-            _canMove = true;
-            _triggered = false;
+            if (other.GetComponent<Tank>().TeamNumber != teamNumber)
+            {
+                _canMove = true;
+                _triggered = false;
+            }
         }
     }
 

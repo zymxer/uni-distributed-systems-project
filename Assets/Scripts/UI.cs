@@ -7,6 +7,6 @@ public class UI : MonoBehaviour
 {
     public void Restart()
     {
-        SceneManager.LoadSceneAsync("Main");
+        SceneManager.LoadSceneAsync(SceneManager.GetActiveScene().name);
     }
 }
