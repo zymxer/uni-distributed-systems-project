@@ -28,6 +28,7 @@ public class Tank : MonoBehaviour
     [SerializeField] private GameObject flag;
     
     private Timer _shotTimer;
+    private float _deltaTime;
     private Seeker _seeker;
     
     
@@ -40,11 +41,11 @@ public class Tank : MonoBehaviour
     private Vector3 _position;
     private Quaternion _rotation;
     
-    private bool _pathFinished = false;
-    private bool _shoots = false;
+    private bool _pathFinished = true;
+
+    private int capturedTeamNumber;
     
     private Path _path;
-    
     private Vector3 _target;
     private int _currentPoint;
     private Vector3 _direction;
@@ -52,10 +53,11 @@ public class Tank : MonoBehaviour
     private float _angle;
 
     private bool _canMove = true;
-    private bool _triggered = false;
+    private bool _triggered;
+    private bool _capturing;
+    private bool _isDefender;
+    private bool _shoots;
     
-    //CHANGED IN MAIN THREAD
-    private float _deltaTime;
 
     
     private void Start()
@@ -63,10 +65,6 @@ public class Tank : MonoBehaviour
         _position = transform.position;
         
         _seeker = GetComponent<Seeker>();
-        _target = Field.Instance.GetRandomPoint();
-        
-        
-        _seeker.StartPath(_position, _target, OnPathGenerationComplete);
 
         _shotTimer = gameObject.AddComponent<Timer>();
         _shotTimer.SetTimer(shotCooldown);
@@ -80,17 +78,29 @@ public class Tank : MonoBehaviour
     private void Update()
     {
         _resetEvent.Set(); // allows thread function to continue executing
+        
+        if (_pathFinished && !_triggered)
+        {
+            if (_capturing)
+            {
+                UpdateTarget(Team2.Teams[capturedTeamNumber].GetRandomPoint(false));
+            }
+            else if (_isDefender)
+            {
+                UpdateTarget(_team.GetRandomPoint(true));
+            }
+            else if(!_isDefender)
+            {
+                UpdateTarget(Field.Instance.GetRandomPoint());   
+            }
+            _pathFinished = false;
+        }
+        
         if (_path == null)
             return;
         
         _deltaTime = Time.deltaTime;
         
-        if (_pathFinished)
-        {
-            UpdateTarget(Field.Instance.GetRandomPoint());
-            _pathFinished = false;
-        }
-
         if (_shoots)
         {
             Shoot();
@@ -125,11 +135,12 @@ public class Tank : MonoBehaviour
         }
     }
 
-    public void SetTeam(Team2 team, int tankNumber)
+    public void SetTeam(Team2 team, int tankNumber, bool isDefender)
     {
         _team = team;
         this.tankNumber = tankNumber;
         teamNumber = team.TeamNumber;
+        _isDefender = isDefender;
         flag.GetComponent<SpriteRenderer>().color = _team.Color;
     }
 
@@ -219,10 +230,24 @@ public class Tank : MonoBehaviour
     {
         if (other.CompareTag("Tank"))
         {
-            if (other.GetComponent<Tank>().TeamNumber != teamNumber)
+            if (other.isTrigger) 
+                return;
+            if (other.GetComponent<Tank>().TeamNumber == teamNumber) 
+                return;
+            _triggered = true;
+            if (_capturing)
             {
-                //UpdateTarget(other.transform.position);
-                _triggered = true;   
+                UpdateTarget(other.transform.position);   
+            }
+
+        }
+        else if(other.CompareTag("Base"))
+        {
+            if (other.GetComponent<Team2>().TeamNumber != teamNumber)
+            {
+                _capturing = true;
+                capturedTeamNumber = other.GetComponent<Team2>().TeamNumber;
+                UpdateTarget(other.GetComponent<Team2>().GetRandomPoint(false));
             }
         }
     }
@@ -231,11 +256,13 @@ public class Tank : MonoBehaviour
     {
         if (other.CompareTag("Tank"))
         {
-            if (other.GetComponent<Tank>().TeamNumber != teamNumber)
-            {
-                _canMove = true;
-                _triggered = false;
-            }
+            if (other.isTrigger) 
+                return;
+            if (other.GetComponent<Tank>().TeamNumber == teamNumber) 
+                return;
+            _canMove = true;
+            _triggered = false;
+            _pathFinished = true;
         }
     }
 
