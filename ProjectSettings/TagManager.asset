@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Tank
   - Box
+  - Base
   layers:
   - Default
   - TransparentFX

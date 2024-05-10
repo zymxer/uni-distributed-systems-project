@@ -1,12 +1,15 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
 using Random = UnityEngine.Random;
+using System.Runtime.Serialization.Formatters.Binary;
 
+[Serializable]
 public class Team2 : MonoBehaviour
 {
     public static int teamsAmount = 0;
@@ -61,6 +64,7 @@ public class Team2 : MonoBehaviour
         captureTimer.OnEnd().AddListener(OnCaptureTimerEnd);
         captureTimer.OnValueChanged().AddListener(OnCaptureTimerChange);
         CreateTanks();
+        Serialize(this);
     }
 
     public void CreateTanks()
@@ -149,6 +153,26 @@ public class Team2 : MonoBehaviour
             {
                 captureTimer.Stop();
             }
+        }
+    }
+
+    public static byte[] Serialize(Team2 team)
+    {
+        BinaryFormatter formatter = new BinaryFormatter();
+        using (MemoryStream stream = new MemoryStream())
+        {
+            formatter.Serialize(stream, team);
+            Debug.Log(stream.ToArray().Length);
+            return stream.ToArray();
+        }
+    }
+
+    public static Team2 Deserialize(byte[] data)
+    {
+        BinaryFormatter formatter = new BinaryFormatter();
+        using (MemoryStream stream = new MemoryStream(data))
+        {
+            return (Team2)(formatter.Deserialize(stream));
         }
     }
 }

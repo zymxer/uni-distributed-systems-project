@@ -7,6 +7,7 @@ using Pathfinding;
 using Unity.VisualScripting;
 using UnityEngine.Serialization;
 
+[Serializable]
 public class Tank : MonoBehaviour
 {
     //CONST
