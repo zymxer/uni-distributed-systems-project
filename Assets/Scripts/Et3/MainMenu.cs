@@ -9,4 +9,9 @@ public class MainMenu : MonoBehaviour
     {
         SceneManager.LoadSceneAsync("Server");
     }
+
+    public void ClientButton()
+    {
+        SceneManager.LoadSceneAsync("Client");
+    }
 }

@@ -7,9 +7,14 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Runtime.Serialization.Formatters.Binary;
+using TMPro;
+using UnityEngine.UI;
+
 public class Client : MonoBehaviour
 {
-    [SerializeField] private Team2 _team2;
+    [SerializeField] private TMP_InputField ipInputField;
+    [SerializeField] private TMP_Text connectionResult;
+    private Team2 _team;
     private TcpClient client;
     private Thread receiveThread;
     private Thread sendThread;
@@ -17,7 +22,6 @@ public class Client : MonoBehaviour
     void Start()
     {
         _resetEvent = new AutoResetEvent(false);
-        ConnectToServer();
     }
 
     private void Update()
@@ -25,25 +29,17 @@ public class Client : MonoBehaviour
         _resetEvent.Set();
     }
 
-    void ConnectToServer()
+    public void ConnectToServer()
     {
         try
         {
             client = new TcpClient();
-            client.Connect(IPAddress.Loopback, 7777);
-            Debug.Log("Connected to server");
-            
-            receiveThread = new Thread(ReceiveData);
-            receiveThread.IsBackground = true;
-            receiveThread.Start();
-
-            sendThread = new Thread(SendData);
-            sendThread.IsBackground = true;
-            sendThread.Start();
+            client.Connect(IPAddress.Parse(ipInputField.text), 10001);
+            connectionResult.text = "Connected successfully";
         }
         catch (Exception e)
         {
-            Debug.LogError("Error connecting to server: " + e.Message);
+            connectionResult.text = "Error while connecting";
         }
     }
     
@@ -67,19 +63,8 @@ public class Client : MonoBehaviour
 
     void SendData()
     {
-        _resetEvent.WaitOne();
-        try
-        {
-            while (client.Connected)
-            {
-                byte[] data = Team2.Serialize(_team2);
-                client.GetStream().Write(data, 0, data.Length);
-            }
-        }
-        catch (Exception e)
-        {
-            Debug.LogError("Error sending data: " + e.Message);
-        }
+
+        
     }
 
     void OnDestroy()

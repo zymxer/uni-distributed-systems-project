@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Sockets;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading;
 using UnityEngine;
 
@@ -39,27 +41,61 @@ public class ClientHandler : MonoBehaviour
         _writeThread.Start();
     }
 
+    
+    // reading single client data
     private void ReadThread()
     {
+        BinaryFormatter formatter = new BinaryFormatter();
         while (_isRunning)
         {
-           
-            //...
+            byte[] sizeBytes = new byte[4];
+            int bytesRead = _client.GetStream().Read(sizeBytes, 0, sizeBytes.Length);
+            if (bytesRead == 0)
+                break;
+
+            int dataSize = BitConverter.ToInt32(sizeBytes, 0);
+
+            byte[] data = new byte[dataSize];
+            bytesRead = 0;
+
+            while (bytesRead < dataSize)
+            {
+                int read = _client.GetStream().Read(data, bytesRead, dataSize - bytesRead);
+                if (read == 0)
+                    break;
+                bytesRead += read;
+            }
+            if (bytesRead == dataSize)
+            {
+                using (MemoryStream memoryStream = new MemoryStream(data))
+                    _receivedData = (ClientData)formatter.Deserialize(memoryStream);
+            }
         }
     }
     
+    // writing List
     private void WriteThread()
     {
+        BinaryFormatter formatter = new BinaryFormatter();
         while (_isRunning)
         {
             _serverResetEvent.WaitOne();
-            //...
-            
+
+            using (MemoryStream memoryStream = new MemoryStream())
+            {
+                formatter.Serialize(memoryStream, _dataToSend);
+                byte[] data = memoryStream.ToArray();
+                int intSize = data.Length;
+                byte[] dataSize = BitConverter.GetBytes(intSize);
+                
+                _client.GetStream().Write(dataSize, 0, dataSize.Length);
+                _client.GetStream().Write(data, 0, data.Length);
+            }
             
             _dataToSend.Clear();
         }
     }
-
+    
     public void Shutdown()
     {
         _isRunning = false;

@@ -11,4 +11,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Et3/Server.unity
     guid: 9639021f65e568a498165a9cca886c09
+  - enabled: 1
+    path: Assets/Scenes/Et3/Client.unity
+    guid: 9734511248e29d241a0bd0f4d14b980c
   m_configObjects: {}

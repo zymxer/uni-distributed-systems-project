@@ -10,6 +10,7 @@ public class Server : MonoBehaviour
     [SerializeField] private GameObject tank;
     [SerializeField] private GameObject missile;
     [SerializeField] private TMP_Text ipText;
+    [SerializeField] private TMP_Text clientsText;
     private TcpListener _server;
     private List<ClientHandler> _clientHandlers;
     private Thread _serverThread;
@@ -55,7 +56,7 @@ public class Server : MonoBehaviour
             try
             {
                 TcpClient client = _server.AcceptTcpClient();
-                Debug.Log("Client " + client + " accepted");
+                clientsText.text += client.Client + " connected\n";
                 ClientHandler handler = gameObject.AddComponent<ClientHandler>();
                 
                 _drawnTanks.Add(new List<GameObject>());
