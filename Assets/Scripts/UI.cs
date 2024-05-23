@@ -8,7 +8,10 @@ public class UI : MonoBehaviour
 {
     
     private static UI _instance = null;
-    [SerializeField] private TMP_Text gameOverText; 
+    [SerializeField] private TMP_Text gameOverText;
+    [SerializeField] private GameObject gamePanel;
+    [SerializeField] private GameObject startPanel;
+    
 
     public static UI Instance
     {
@@ -28,6 +31,11 @@ public class UI : MonoBehaviour
         SceneManager.LoadSceneAsync(SceneManager.GetActiveScene().name);
     }
 
+    public void StartGame()
+    {
+        startPanel.SetActive(false);
+        gamePanel.SetActive(true);
+    }
     public void GameOver(int teamNumber)
     {
         gameOverText.enabled = true;

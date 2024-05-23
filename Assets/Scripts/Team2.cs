@@ -64,7 +64,7 @@ public class Team2 : MonoBehaviour
         captureTimer.OnEnd().AddListener(OnCaptureTimerEnd);
         captureTimer.OnValueChanged().AddListener(OnCaptureTimerChange);
         CreateTanks();
-        Serialize(this);
+        
     }
 
     public void CreateTanks()
