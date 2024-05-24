@@ -10,7 +10,7 @@ using UnityEngine.Serialization;
 [Serializable]
 public class Tank : MonoBehaviour
 {
-    //CONST
+    // Constants and Serialized Fields
     [Header("Tank Parameters")]
     [SerializeField] private float speed;
     [SerializeField] private float rotationSpeed;
@@ -18,34 +18,33 @@ public class Tank : MonoBehaviour
     [SerializeField] private GameObject missile;
     [SerializeField] private float shotCooldown;
     [SerializeField] private float attackRange;
-    
-    [Space] [Header("Navigation")] 
+    [Space]
+    [Header("Navigation")]
     [SerializeField] private float nextPointDistance = 0.1f;
-
-    [Space] [Header("Team")] 
+    [Space]
+    [Header("Team")]
     private Team2 _team;
     private int teamNumber;
     private int tankNumber;
     [SerializeField] private GameObject flag;
-    
+
     private Timer _shotTimer;
     private float _deltaTime;
     private Seeker _seeker;
-    
-    
+
     private Thread _thread;
     private bool _threadStopped = false;
     private AutoResetEvent _resetEvent;
     private readonly object _lockObject = new object();
-    
-    //VARIABLES
+
+    // Variables
     private Vector3 _position;
     private Quaternion _rotation;
-    
+
     private bool _pathFinished = true;
 
     private int capturedTeamNumber;
-    
+
     private Path _path;
     private Vector3 _target;
     private int _currentPoint;
@@ -58,28 +57,22 @@ public class Tank : MonoBehaviour
     private bool _capturing;
     private bool _isDefender;
     private bool _shoots;
-    
 
-    
     private void Start()
     {
         _position = transform.position;
-        
         _seeker = GetComponent<Seeker>();
-
         _shotTimer = gameObject.AddComponent<Timer>();
         _shotTimer.SetTimer(shotCooldown);
-
         _resetEvent = new AutoResetEvent(false);
         _thread = new Thread(Run);
         _thread.Start();
-
     }
-    
+
     private void Update()
     {
         _resetEvent.Set(); // allows thread function to continue executing
-        
+
         if (_pathFinished && !_triggered)
         {
             if (_capturing)
@@ -90,27 +83,27 @@ public class Tank : MonoBehaviour
             {
                 UpdateTarget(_team.GetRandomPoint(true));
             }
-            else if(!_isDefender)
+            else if (!_isDefender)
             {
-                UpdateTarget(Field.Instance.GetRandomPoint());   
+                UpdateTarget(Field.Instance.GetRandomPoint());
             }
             _pathFinished = false;
         }
-        
+
         if (_path == null)
             return;
-        
+
         _deltaTime = Time.deltaTime;
-        
+
         if (_shoots)
         {
             Shoot();
         }
-        
+
         transform.rotation = _rotation;
         transform.position = _position;
     }
-    
+
     private void ThreadFunction()
     {
         _resetEvent.WaitOne();  // waits for signal from Update()
@@ -119,9 +112,9 @@ public class Tank : MonoBehaviour
         UpdatePath();
         if (_pathFinished)
             return;
-        if (_path == null) 
+        if (_path == null)
             return;
-        
+
         UpdateDirection();
         UpdateRotation();
         if (_canMove)
@@ -155,16 +148,16 @@ public class Tank : MonoBehaviour
             _currentPoint = 0;
         }
     }
-    
+
     private void UpdateDirection()
     {
         _direction = (_path.vectorPath[_currentPoint] - _position).normalized;
         _angle = Mathf.Atan2(_direction.y, _direction.x) * Mathf.Rad2Deg;
     }
-    
+
     private void UpdatePath()
     {
-        if(_path == null)
+        if (_path == null)
             return;
         _distance = Vector2.Distance(_position, _path.vectorPath[_currentPoint]);
         if (_distance < nextPointDistance)
@@ -210,45 +203,49 @@ public class Tank : MonoBehaviour
         _seeker.StartPath(_position, _target, OnPathGenerationComplete);
         _currentPoint = 0;
     }
-    
+
     private void ReachedEndCheck()
     {
-        if(_currentPoint >= _path.vectorPath.Count)
+        if (_currentPoint >= _path.vectorPath.Count)
         {
             _pathFinished = true;
         }
     }
-    
+
     private void Run()
     {
-        while (!_threadStopped)  
-        {  
-            ThreadFunction();  
-        } 
+        while (!_threadStopped)
+        {
+            ThreadFunction();
+        }
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (other.CompareTag("Tank"))
         {
-            if (other.isTrigger) 
+            if (other.isTrigger)
                 return;
-            if (other.GetComponent<Tank>().TeamNumber == teamNumber) 
+            Tank enemyTank = other.GetComponent<Tank>();
+            if (enemyTank.TeamNumber == teamNumber)
                 return;
             _triggered = true;
+            _team.ReportEnemySpotted(enemyTank); // reporting
+
             if (_capturing)
             {
-                UpdateTarget(other.transform.position);   
+                UpdateTarget(other.transform.position);
             }
-
         }
-        else if(other.CompareTag("Base"))
+        else if (other.CompareTag("Base"))
         {
-            if (other.GetComponent<Team2>().TeamNumber != teamNumber)
+            Team2 enemyBase = other.GetComponent<Team2>();
+            if (enemyBase.TeamNumber != teamNumber)
             {
                 _capturing = true;
-                capturedTeamNumber = other.GetComponent<Team2>().TeamNumber;
-                UpdateTarget(other.GetComponent<Team2>().GetRandomPoint(false));
+                capturedTeamNumber = enemyBase.TeamNumber;
+                UpdateTarget(enemyBase.GetRandomPoint(false));
+                _team.ReportEnemyBaseSpotted(enemyBase); // reporting enemy base
             }
         }
     }
@@ -257,9 +254,9 @@ public class Tank : MonoBehaviour
     {
         if (other.CompareTag("Tank"))
         {
-            if (other.isTrigger) 
+            if (other.isTrigger)
                 return;
-            if (other.GetComponent<Tank>().TeamNumber == teamNumber) 
+            if (other.GetComponent<Tank>().TeamNumber == teamNumber)
                 return;
             _canMove = true;
             _triggered = false;
@@ -277,5 +274,17 @@ public class Tank : MonoBehaviour
     {
         _thread.Abort();
         _threadStopped = true;
+    }
+
+    public void OnEnemyBaseSpotted(Team2 enemyBase)
+    {
+        UpdateTarget(enemyBase.transform.position); // Setting current target to enemy base
+        Debug.Log($"Tank {tankNumber} from Team {teamNumber} received enemy base spotted information"); // Notifying the tank
+    }
+
+    public void OnEnemySpotted(Tank enemyTank)
+    {
+        UpdateTarget(enemyTank.transform.position); // Setting current target
+        Debug.Log($"Tank {tankNumber} from Team {teamNumber} received enemy spotted information"); // Notifying the team
     }
 }

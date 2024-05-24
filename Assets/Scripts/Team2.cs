@@ -14,7 +14,7 @@ public class Team2 : MonoBehaviour
 {
     public static int teamsAmount = 0;
     public static List<Team2> teams = new List<Team2>();
-    
+
     [SerializeField] private float captureTime = 5f;
     [SerializeField] private int teamNumber;
     [SerializeField] private Color teamColor;
@@ -33,10 +33,7 @@ public class Team2 : MonoBehaviour
     private Vector2 _baseSize;
 
     private List<Tank> _tanks;
-    
-    
-    
-    
+
     private void Start()
     {
         _tanks = new List<Tank>();
@@ -58,13 +55,12 @@ public class Team2 : MonoBehaviour
 
         captureSlider.maxValue = captureTime;
         captureSlider.value = captureTime;
-        
+
         captureTimer = gameObject.AddComponent<Timer>();
         captureTimer.SetTimer(captureTime);
         captureTimer.OnEnd().AddListener(OnCaptureTimerEnd);
         captureTimer.OnValueChanged().AddListener(OnCaptureTimerChange);
         CreateTanks();
-        
     }
 
     public void CreateTanks()
@@ -77,10 +73,10 @@ public class Team2 : MonoBehaviour
             _tanks.Add(tank.GetComponent<Tank>());
         }
     }
-    
+
     public Vector3 GetRandomPoint(bool withMargin)
     {
-        Vector3 point = new Vector3(Random.Range(-_baseSize.x/2, _baseSize.x/2), Random.Range(-_baseSize.y/2, _baseSize.y/2));
+        Vector3 point = new Vector3(Random.Range(-_baseSize.x / 2, _baseSize.x / 2), Random.Range(-_baseSize.y / 2, _baseSize.y / 2));
         if (withMargin)
         {
             point *= baseMargin;
@@ -98,7 +94,7 @@ public class Team2 : MonoBehaviour
         UI.Instance.GameOver(attackerTeamNumber);
         Time.timeScale = 0;
     }
-    
+
     private void OnCaptureTimerChange()
     {
         captureSlider.value = captureTimer.GetValue();
@@ -108,17 +104,17 @@ public class Team2 : MonoBehaviour
     {
         if (other.CompareTag("Tank"))
         {
-            if(other.isTrigger)
+            if (other.isTrigger)
                 return;
             if (other.GetComponent<Tank>().TeamNumber == teamNumber)
             {
                 alliesInBase++;
-                if(captureTimer.IsActive())
+                if (captureTimer.IsActive())
                     captureTimer.Stop();
             }
             else
             {
-                attackerTeamNumber = other.GetComponent<Tank>().TeamNumber;     
+                attackerTeamNumber = other.GetComponent<Tank>().TeamNumber;
             }
         }
     }
@@ -127,13 +123,13 @@ public class Team2 : MonoBehaviour
     {
         if (other.CompareTag("Tank"))
         {
-            if(other.isTrigger)
+            if (other.isTrigger)
                 return;
             if (other.GetComponent<Tank>().TeamNumber == teamNumber)
                 return;
             if (alliesInBase == 0)
             {
-                if(!captureTimer.IsActive())
+                if (!captureTimer.IsActive())
                     captureTimer.Activate();
             }
         }
@@ -143,7 +139,7 @@ public class Team2 : MonoBehaviour
     {
         if (other.CompareTag("Tank"))
         {
-            if(other.isTrigger)
+            if (other.isTrigger)
                 return;
             if (other.GetComponent<Tank>().TeamNumber == teamNumber)
             {
@@ -155,6 +151,25 @@ public class Team2 : MonoBehaviour
             }
         }
     }
+
+    public void ReportEnemySpotted(Tank enemyTank)
+    {
+        Debug.Log($"Team {teamNumber} spotted an enemy tank from Team {enemyTank.TeamNumber} at position {enemyTank.transform.position}");
+        foreach (Tank tank in _tanks) // Notifying the whole team about the opponent
+        {
+            tank.OnEnemySpotted(enemyTank);
+        }
+    }
+
+    public void ReportEnemyBaseSpotted(Team2 enemyBase)
+    {
+        Debug.Log($"Team {teamNumber} spotted an enemy base from Team {enemyBase.TeamNumber} at position {enemyBase.transform.position}");
+        foreach (Tank tank in _tanks) // Notifying the whole team about the enemy base
+        {
+            tank.OnEnemyBaseSpotted(enemyBase);
+        }
+    }
+
 
     public static byte[] Serialize(Team2 team)
     {
