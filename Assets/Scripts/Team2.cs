@@ -9,9 +9,9 @@ using UnityEngine.UI;
 using Random = UnityEngine.Random;
 using System.Runtime.Serialization.Formatters.Binary;
 
-[Serializable]
 public class Team2 : MonoBehaviour
 {
+    [SerializeField] private bool active = true;
     public static int teamsAmount = 0;
     public static List<Team2> teams = new List<Team2>();
 
@@ -34,9 +34,15 @@ public class Team2 : MonoBehaviour
 
     private List<Tank> _tanks;
 
+    private List<GameObject> _tanksObjects;
+    private List<GameObject> _missilesObjects;
+
     private void Start()
     {
         _tanks = new List<Tank>();
+        _tanksObjects = new List<GameObject>();
+        _missilesObjects = new List<GameObject>();
+        
         _baseSize = gameObject.transform.localScale;
         spawns = new Vector3[9];
         int index = 0;
@@ -60,6 +66,9 @@ public class Team2 : MonoBehaviour
         captureTimer.SetTimer(captureTime);
         captureTimer.OnEnd().AddListener(OnCaptureTimerEnd);
         captureTimer.OnValueChanged().AddListener(OnCaptureTimerChange);
+        if(!active)
+            return;
+        
         CreateTanks();
     }
 
@@ -68,6 +77,7 @@ public class Team2 : MonoBehaviour
         for (int i = 0; i < tanksAmount; i++)
         {
             GameObject tank = Instantiate(tankPrefab, spawns[i], Quaternion.identity);
+            _tanksObjects.Add(tank);
             bool isDefender = i < startDefendersAmount;
             tank.GetComponent<Tank>().SetTeam(this, i, isDefender);
             _tanks.Add(tank.GetComponent<Tank>());
@@ -85,9 +95,27 @@ public class Team2 : MonoBehaviour
         return point;
     }
 
+    public void Activate()
+    {
+        active = true;
+        CreateTanks();
+    }
+
     public Color Color => teamColor;
     public int TeamNumber => teamNumber;
     public static List<Team2> Teams => teams;
+    public List<GameObject> MissilesObjects => _missilesObjects;
+    public List<GameObject> TanksObjects => _tanksObjects;
+    public bool Active {
+        get
+        {
+            return active;
+        }
+        set
+        {
+            active = value;
+        }
+    }
 
     private void OnCaptureTimerEnd()
     {
@@ -157,7 +185,8 @@ public class Team2 : MonoBehaviour
         Debug.Log($"Team {teamNumber} spotted an enemy tank from Team {enemyTank.TeamNumber} at position {enemyTank.transform.position}");
         foreach (Tank tank in _tanks) // Notifying the whole team about the opponent
         {
-            tank.OnEnemySpotted(enemyTank);
+            if(!tank.IsDefender && !tank.IsTriggered)
+                tank.OnEnemySpotted(enemyTank);
         }
     }
 
@@ -167,27 +196,6 @@ public class Team2 : MonoBehaviour
         foreach (Tank tank in _tanks) // Notifying the whole team about the enemy base
         {
             tank.OnEnemyBaseSpotted(enemyBase);
-        }
-    }
-
-
-    public static byte[] Serialize(Team2 team)
-    {
-        BinaryFormatter formatter = new BinaryFormatter();
-        using (MemoryStream stream = new MemoryStream())
-        {
-            formatter.Serialize(stream, team);
-            Debug.Log(stream.ToArray().Length);
-            return stream.ToArray();
-        }
-    }
-
-    public static Team2 Deserialize(byte[] data)
-    {
-        BinaryFormatter formatter = new BinaryFormatter();
-        using (MemoryStream stream = new MemoryStream(data))
-        {
-            return (Team2)(formatter.Deserialize(stream));
         }
     }
 }

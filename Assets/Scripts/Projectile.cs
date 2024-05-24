@@ -28,6 +28,9 @@ public class Projectile : MonoBehaviour
     {
         if (other.gameObject.CompareTag("Tank"))
         {
+            if(!other.gameObject.GetComponent<Tank>().Active)
+                return;
+            
             if (firstHit)
             {
                 Destroy(other.gameObject);

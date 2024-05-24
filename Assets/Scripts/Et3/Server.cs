@@ -11,6 +11,7 @@ public class Server : MonoBehaviour
     [SerializeField] private GameObject missile;
     [SerializeField] private TMP_Text ipText;
     [SerializeField] private TMP_Text clientsText;
+    public TMP_Text receivedText;
     private TcpListener _server;
     private List<ClientHandler> _clientHandlers;
     private Thread _serverThread;
@@ -42,11 +43,11 @@ public class Server : MonoBehaviour
 
     private void Update()
     {
-        if (!_isAccepting)
-        {
-            SendData();
-            DrawData();
-        }
+        if (_isAccepting)
+            return;
+        SendData();
+        DrawData();
+        
     }
 
     private void AcceptClients()
@@ -79,9 +80,10 @@ public class Server : MonoBehaviour
         {
             foreach (ClientHandler handler2 in _clientHandlers)
             {
-                if (handler.Client != handler2.Client)
+                if (handler != handler2)
                 {
-                    handler.DataToSend.Add(handler2.ReceivedData);
+                    if(handler2.ReceivedData != null)
+                        handler.DataToSend.Add(handler2.ReceivedData);
                 }
             }
         }
@@ -90,6 +92,7 @@ public class Server : MonoBehaviour
 
     private void DrawData()
     {
+        //receivedText.text = handler.ReceivedData == null? "NUll received" : "Normal data";
         foreach (ClientHandler handler in _clientHandlers)
         {
             DrawTanks(handler);
@@ -100,6 +103,7 @@ public class Server : MonoBehaviour
     private void DrawTanks(ClientHandler handler)
     {
         List<ObjectData> tanksData = handler.ReceivedData.Tanks;
+        Color teamColor = handler.ReceivedData.TeamColor;
         int handlerIndex = handler.DrawnIndex;
         List<GameObject> drawnList = _drawnTanks[handlerIndex];
         for (int i = 0; i < tanksData.Count; i++)
@@ -111,6 +115,8 @@ public class Server : MonoBehaviour
 
             drawnList[i].transform.position = tanksData[i].Position;
             drawnList[i].transform.rotation = tanksData[i].Rotation;
+            drawnList[i].transform.GetChild(0).gameObject.GetComponent<SpriteRenderer>().color = teamColor;
+            drawnList[i].SetActive(tanksData[i].Active);
         }
     }
     private void DrawMissiles(ClientHandler handler)
@@ -127,13 +133,37 @@ public class Server : MonoBehaviour
 
             drawnList[i].transform.position = missilesData[i].Position;
             drawnList[i].transform.rotation = missilesData[i].Rotation;
+            drawnList[i].SetActive(missilesData[i].Active);
         }
     }
 
     public void StartGame()
     {
+        SendStartMessage();
         _isAccepting = false;
         _serverThread.Abort();
+    }
+
+    private void SendStartMessage()
+    {
+        try
+        {
+            
+            byte[] data = BitConverter.GetBytes(true);
+            
+            byte[] sizeBytes = BitConverter.GetBytes(data.Length);
+
+            foreach (ClientHandler handler in _clientHandlers)
+            {
+                handler.StartHandler();
+                handler.Client.GetStream().Write(sizeBytes, 0, sizeBytes.Length);
+                handler.Client.GetStream().Write(data, 0, data.Length);
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("Exception in SendGameStartMessage: " + e.Message);
+        }
     }
     
     private String GetLocalIPAddress()

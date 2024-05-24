@@ -10,6 +10,7 @@ using UnityEngine.Serialization;
 [Serializable]
 public class Tank : MonoBehaviour
 {
+    [SerializeField] private bool active = true;
     // Constants and Serialized Fields
     [Header("Tank Parameters")]
     [SerializeField] private float speed;
@@ -60,6 +61,9 @@ public class Tank : MonoBehaviour
 
     private void Start()
     {
+        if (!active)
+            return;
+        
         _position = transform.position;
         _seeker = GetComponent<Seeker>();
         _shotTimer = gameObject.AddComponent<Timer>();
@@ -71,6 +75,9 @@ public class Tank : MonoBehaviour
 
     private void Update()
     {
+        if(!active)
+            return;
+        
         _resetEvent.Set(); // allows thread function to continue executing
 
         if (_pathFinished && !_triggered)
@@ -137,8 +144,17 @@ public class Tank : MonoBehaviour
         _isDefender = isDefender;
         flag.GetComponent<SpriteRenderer>().color = _team.Color;
     }
+    
+    public void SetTeam(int teamNumber, Color teamColor)
+    {
+        this.teamNumber = teamNumber;
+        flag.GetComponent<SpriteRenderer>().color = teamColor;
+    }
 
     public int TeamNumber => teamNumber;
+    public bool Active => active;
+    public bool IsDefender => _isDefender;
+    public bool IsTriggered => _triggered;
 
     private void OnPathGenerationComplete(Path path)
     {
@@ -172,7 +188,7 @@ public class Tank : MonoBehaviour
     {
         if (!_shotTimer.IsActive())
         {
-            Instantiate(missile, _position, _rotation);
+            _team.MissilesObjects.Add(Instantiate(missile, _position, _rotation));
             _shotTimer.Activate();
             _shoots = false;
         }
@@ -222,6 +238,9 @@ public class Tank : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
+        if(!active)
+            return;
+        
         if (other.CompareTag("Tank"))
         {
             if (other.isTrigger)
@@ -252,6 +271,9 @@ public class Tank : MonoBehaviour
 
     private void OnTriggerExit2D(Collider2D other)
     {
+        if(!active)
+            return;
+        
         if (other.CompareTag("Tank"))
         {
             if (other.isTrigger)

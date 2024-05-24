@@ -32,20 +32,24 @@ public class ClientHandler : MonoBehaviour
         _serverResetEvent = resetEvent;
         _isRunning = true;
 
+        _receivedData = new ClientData();
+        _dataToSend = new List<ClientData>();
+
         _drawnIndex = drawnIndex;
         
         _readThread = new Thread(ReadThread);
         _writeThread = new Thread(WriteThread);
         
+    }
+
+    public void StartHandler()
+    {
         _readThread.Start();
         _writeThread.Start();
     }
-
-    
     // reading single client data
     private void ReadThread()
     {
-        BinaryFormatter formatter = new BinaryFormatter();
         while (_isRunning)
         {
             byte[] sizeBytes = new byte[4];
@@ -67,31 +71,34 @@ public class ClientHandler : MonoBehaviour
             }
             if (bytesRead == dataSize)
             {
-                using (MemoryStream memoryStream = new MemoryStream(data))
-                    _receivedData = (ClientData)formatter.Deserialize(memoryStream);
+                string json = System.Text.Encoding.UTF8.GetString(data);
+                
+                _receivedData = JsonUtility.FromJson<ClientData>(json);
             }
         }
     }
     
-    // writing List
     private void WriteThread()
     {
-        BinaryFormatter formatter = new BinaryFormatter();
         while (_isRunning)
         {
             _serverResetEvent.WaitOne();
 
             using (MemoryStream memoryStream = new MemoryStream())
             {
-                formatter.Serialize(memoryStream, _dataToSend);
-                byte[] data = memoryStream.ToArray();
-                int intSize = data.Length;
-                byte[] dataSize = BitConverter.GetBytes(intSize);
                 
-                _client.GetStream().Write(dataSize, 0, dataSize.Length);
+                string json = JsonUtility.ToJson(_dataToSend);
+                byte[] data = System.Text.Encoding.UTF8.GetBytes(json);
+
+                
+                int dataSize = data.Length;
+                byte[] dataSizeBytes = BitConverter.GetBytes(dataSize);
+                _client.GetStream().Write(dataSizeBytes, 0, dataSizeBytes.Length);
+
+                
                 _client.GetStream().Write(data, 0, data.Length);
             }
-            
+
             _dataToSend.Clear();
         }
     }
