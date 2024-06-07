@@ -17,7 +17,7 @@ public class ClientHandler : MonoBehaviour
     private int _drawnIndex;
     
     private ClientData _receivedData;
-    private List<ClientData> _dataToSend;
+    public List<ClientData> _dataToSend;
     
     private AutoResetEvent _resetEvent;
     private ManualResetEvent _serverResetEvent;
@@ -118,20 +118,28 @@ public class ClientHandler : MonoBehaviour
             if(DataToSend.Count == 0)
                 continue;
             
+            
             //Debug.Log("HANDLER: Waiting for server");
             
             _serverResetEvent.WaitOne();
             
-            //Debug.Log("HANDLER: READY TO SEND " + _dataToSend.Count + " OF DATA");
+           /*Debug.Log("HANDLER: READY TO SEND " + _dataToSend.Count + " OF DATA:");
+            foreach (ClientData data in _dataToSend)
+            {
+                data.OutputData();
+            }*/
             
             using (MemoryStream memoryStream = new MemoryStream())
             {
-                
-                string json = JsonUtility.ToJson(_dataToSend);
+                ClientDataListWrapper wrapper = new ClientDataListWrapper();
+                wrapper.data = _dataToSend;
+                string json = JsonUtility.ToJson(wrapper);
+                //Debug.Log("HANDLER JSON: " + json);
                 byte[] data = System.Text.Encoding.UTF8.GetBytes(json);
 
                 
                 int dataSize = data.Length;
+                //Debug.Log("HANDLER: DATA TO SEND SIZE = " + dataSize);
                 byte[] dataSizeBytes = BitConverter.GetBytes(dataSize);
                 _client.GetStream().Write(dataSizeBytes, 0, dataSizeBytes.Length);
 
@@ -139,7 +147,7 @@ public class ClientHandler : MonoBehaviour
                 _client.GetStream().Write(data, 0, data.Length);
             }
 
-            DataToSend.Clear();
+            _dataToSend.Clear();
             _resetEvent.Set();
             
             //Debug.Log("HANDLER: DATA SEND SUCCESSFULLY");

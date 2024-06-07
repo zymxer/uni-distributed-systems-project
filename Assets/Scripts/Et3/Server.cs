@@ -96,9 +96,11 @@ public class Server : MonoBehaviour
             {
                 if (handler != handler2)
                 {
-                    if(handler2.ReceivedData != null)
+                    if (handler2.ReceivedData != null)
+                    {
                         handler.AddDataToSend(handler2.ReceivedData);
-                    
+                    }
+
                 }
             }
             //Debug.Log("SERVER: " + handler.DataToSend.Count + " OF DATAS WILL BE SEND TO client");
@@ -117,7 +119,11 @@ public class Server : MonoBehaviour
 
     private void DrawTanks(ClientHandler handler)
     {
+        if(handler.ReceivedData == null)
+            return;
         List<ObjectData> tanksData = handler.ReceivedData.Tanks;
+        if(tanksData == null)
+            return;
         Color teamColor = handler.ReceivedData.TeamColor;
         int handlerIndex = handler.DrawnIndex;
         List<GameObject> drawnList = _drawnTanks[handlerIndex];
@@ -133,10 +139,22 @@ public class Server : MonoBehaviour
             drawnList[i].transform.GetChild(0).gameObject.GetComponent<SpriteRenderer>().color = teamColor;
             drawnList[i].SetActive(tanksData[i].Active);
         }
+        
+        for (int i = 0; i < drawnList.Count; i++)
+        {
+            if (i > tanksData.Count)
+            {
+                Destroy(drawnList[i]);
+            }
+        }
     }
     private void DrawMissiles(ClientHandler handler)
     {
+        if(handler.ReceivedData == null)
+            return;
         List<ObjectData> missilesData = handler.ReceivedData.Missiles;
+        if(missilesData == null)
+            return;
         int handlerIndex = handler.DrawnIndex;
         List<GameObject> drawnList = _drawnMissiles[handlerIndex];
         for (int i = 0; i < missilesData.Count; i++)
@@ -149,6 +167,13 @@ public class Server : MonoBehaviour
             drawnList[i].transform.position = missilesData[i].Position;
             drawnList[i].transform.rotation = missilesData[i].Rotation;
             drawnList[i].SetActive(missilesData[i].Active);
+        }
+        for (int i = 0; i < drawnList.Count; i++)
+        {
+            if (i > missilesData.Count)
+            {
+                Destroy(drawnList[i]);
+            }
         }
     }
 
@@ -177,7 +202,6 @@ public class Server : MonoBehaviour
         }
         catch (Exception e)
         {
-            Console.WriteLine("Exception in SendGameStartMessage: " + e.Message);
         }
     }
     private String GetLocalIPAddress()

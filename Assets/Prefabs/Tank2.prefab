@@ -255,6 +255,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c0293adee2d074e4bb5cdde3be7fa3db, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  active: 1
   speed: 5
   rotationSpeed: 4
   rotationThreshold: 10
@@ -263,7 +264,6 @@ MonoBehaviour:
   attackRange: 7
   nextPointDistance: 0.3
   flag: {fileID: 7543521902329304880}
-  _isDefender: 0
 --- !u!114 &3401974434901575700
 MonoBehaviour:
   m_ObjectHideFlags: 0

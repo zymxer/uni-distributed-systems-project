@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -43,8 +44,12 @@ public class Client : MonoBehaviour
         _receivedData = new List<ClientData>();
         
         _resetEvent = new AutoResetEvent(false);
+        
         _readThread = new Thread(ReadData);
         _writeThread = new Thread(WriteData);
+        
+        _drawnTanks = new List<GameObject>();
+        _drawnMissiles = new List<GameObject>();
     }
 
     private void Update()
@@ -95,8 +100,12 @@ public class Client : MonoBehaviour
     }
     private void DrawData()
     {
+        if(_receivedData == null)
+            return;
         foreach (ClientData data in _receivedData)
         {
+            if (data == null)
+                continue;
             DrawTanks(data);
             DrawMissiles(data);
         }
@@ -105,37 +114,57 @@ public class Client : MonoBehaviour
     private void DrawTanks(ClientData data)
     {
         List<ObjectData> tanksData = data.Tanks;
+        if(tanksData == null)
+            return;
         Color teamColor = data.TeamColor;
-        List<GameObject> drawnList = _drawnTanks;
         int teamNumber = data.TeamNumber;
+        //Debug.Log("CLIENT: WILL DRAW " + tanksData.Count + " TANKS");
         for (int i = 0; i < tanksData.Count; i++)
         {
-            if (drawnList.Count <= i)
+            if (_drawnTanks.Count <= i)
             {
-                drawnList.Add(Instantiate(tank, Vector3.zero, Quaternion.identity));
+                _drawnTanks.Add(Instantiate(tank, Vector3.zero, Quaternion.identity));
             }
+            
+            _drawnTanks[i].transform.position = tanksData[i].Position;
+            _drawnTanks[i].transform.rotation = tanksData[i].Rotation;
+            _drawnTanks[i].transform.GetChild(0).gameObject.GetComponent<SpriteRenderer>().color = teamColor;
+            _drawnTanks[i].SetActive(tanksData[i].Active);
+            _drawnTanks[i].GetComponent<Tank>().TeamNumber = teamNumber;
+        }
 
-            drawnList[i].transform.position = tanksData[i].Position;
-            drawnList[i].transform.rotation = tanksData[i].Rotation;
-            drawnList[i].transform.GetChild(0).gameObject.GetComponent<SpriteRenderer>().color = teamColor;
-            drawnList[i].SetActive(tanksData[i].Active);
-            drawnList[i].GetComponent<Tank>().TeamNumber = teamNumber;
+        for (int i = 0; i < _drawnTanks.Count; i++)
+        {
+            if (i > tanksData.Count)
+            {
+                Destroy(_drawnTanks[i]);
+            }
         }
     }
     private void DrawMissiles(ClientData data)
     {
         List<ObjectData> missilesData = data.Missiles;
-        List<GameObject> drawnList = _drawnMissiles;
+        if(missilesData == null)
+            return;
+        //Debug.Log("CLIENT: WILL DRAW " + missilesData.Count + " MISSILES");
         for (int i = 0; i < missilesData.Count; i++)
         {
-            if (drawnList.Count <= i)
+            if (_drawnMissiles.Count <= i)
             {
-                drawnList.Add(Instantiate(missile, Vector3.zero, Quaternion.identity));
+                _drawnMissiles.Add(Instantiate(missile, Vector3.zero, Quaternion.identity));
             }
 
-            drawnList[i].transform.position = missilesData[i].Position;
-            drawnList[i].transform.rotation = missilesData[i].Rotation;
-            drawnList[i].SetActive(missilesData[i].Active);
+            _drawnMissiles[i].transform.position = missilesData[i].Position;
+            _drawnMissiles[i].transform.rotation = missilesData[i].Rotation;
+            _drawnMissiles[i].SetActive(missilesData[i].Active);
+        }
+        
+        for (int i = 0; i < _drawnMissiles.Count; i++)
+        {
+            if (i > missilesData.Count)
+            {
+                Destroy(_drawnMissiles[i]);
+            }
         }
     }
     
@@ -143,6 +172,7 @@ public class Client : MonoBehaviour
     {
         while (_isRunning)
         {
+            //Debug.Log("CLIENT: START RECEIVING DATA");
             byte[] sizeBytes = new byte[4];
             int bytesRead = _client.GetStream().Read(sizeBytes, 0, sizeBytes.Length);
             if (bytesRead == 0)
@@ -163,7 +193,16 @@ public class Client : MonoBehaviour
             if (bytesRead == dataSize)
             {
                 string json = System.Text.Encoding.UTF8.GetString(data);
-                _receivedData = JsonUtility.FromJson<List<ClientData>>(json);
+                if (json == "{}")
+                {
+                    _receivedData = null;
+                    continue;
+                }
+                ClientDataListWrapper wrapper = new ClientDataListWrapper();
+                wrapper = JsonUtility.FromJson<ClientDataListWrapper>(json);
+                
+                _receivedData = wrapper.data;
+                
             }
         }
     }

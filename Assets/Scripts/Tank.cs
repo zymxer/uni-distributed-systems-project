@@ -310,12 +310,12 @@ public class Tank : MonoBehaviour
     public void OnEnemyBaseSpotted(Team2 enemyBase)
     {
         UpdateTarget(enemyBase.transform.position); // Setting current target to enemy base
-        Debug.Log($"Tank {tankNumber} from Team {teamNumber} received enemy base spotted information"); // Notifying the tank
+        //Debug.Log($"Tank {tankNumber} from Team {teamNumber} received enemy base spotted information"); // Notifying the tank
     }
 
     public void OnEnemySpotted(Tank enemyTank)
     {
         UpdateTarget(enemyTank.transform.position); // Setting current target
-        Debug.Log($"Tank {tankNumber} from Team {teamNumber} received enemy spotted information"); // Notifying the team
+        //Debug.Log($"Tank {tankNumber} from Team {teamNumber} received enemy spotted information"); // Notifying the team
     }
 }
