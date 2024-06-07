@@ -19,17 +19,48 @@ public class ClientHandler : MonoBehaviour
     private ClientData _receivedData;
     private List<ClientData> _dataToSend;
     
-    private AutoResetEvent _serverResetEvent;
+    private AutoResetEvent _resetEvent;
+    private ManualResetEvent _serverResetEvent;
 
-    public ClientData ReceivedData => _receivedData;
-    public List<ClientData> DataToSend => _dataToSend;
+    private readonly object _lock = new object();
+
+    public ClientData ReceivedData
+    { 
+        get
+        {
+            lock (_lock)
+            {
+                return _receivedData;   
+            }
+        }
+    }
+    public List<ClientData> DataToSend
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _dataToSend;
+            }
+        }
+    }
+
+    public void AddDataToSend(ClientData data)
+    {
+        lock (_lock)
+        {
+            _dataToSend.Add(data);
+        }
+    }
+
     public TcpClient Client => _client;
     public int DrawnIndex => _drawnIndex;
     
-    public void Initialize(TcpClient client, AutoResetEvent resetEvent, int drawnIndex)
+    public void Initialize(TcpClient client,ManualResetEvent _serverEvent, int drawnIndex)
     {
         _client = client;
-        _serverResetEvent = resetEvent;
+        _resetEvent = new AutoResetEvent(true);
+        _serverResetEvent = _serverEvent;
         _isRunning = true;
 
         _receivedData = new ClientData();
@@ -42,13 +73,15 @@ public class ClientHandler : MonoBehaviour
         
     }
 
+    public AutoResetEvent ResetEvent => _resetEvent;
+
     public void StartHandler()
     {
         _readThread.Start();
         _writeThread.Start();
     }
     // reading single client data
-    private void ReadThread()
+    private void ReadThread()   //ok
     {
         while (_isRunning)
         {
@@ -78,12 +111,19 @@ public class ClientHandler : MonoBehaviour
         }
     }
     
-    private void WriteThread()
+    private void WriteThread()  //not ok
     {
         while (_isRunning)
         {
+            if(DataToSend.Count == 0)
+                continue;
+            
+            //Debug.Log("HANDLER: Waiting for server");
+            
             _serverResetEvent.WaitOne();
-
+            
+            //Debug.Log("HANDLER: READY TO SEND " + _dataToSend.Count + " OF DATA");
+            
             using (MemoryStream memoryStream = new MemoryStream())
             {
                 
@@ -99,7 +139,10 @@ public class ClientHandler : MonoBehaviour
                 _client.GetStream().Write(data, 0, data.Length);
             }
 
-            _dataToSend.Clear();
+            DataToSend.Clear();
+            _resetEvent.Set();
+            
+            //Debug.Log("HANDLER: DATA SEND SUCCESSFULLY");
         }
     }
     

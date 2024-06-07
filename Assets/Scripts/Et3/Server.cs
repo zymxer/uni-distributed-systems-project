@@ -2,6 +2,7 @@ using UnityEngine;
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading;
 using TMPro;
@@ -16,7 +17,8 @@ public class Server : MonoBehaviour
     private List<ClientHandler> _clientHandlers;
     private Thread _serverThread;
     private bool _isAccepting = true;
-    private AutoResetEvent _resetEvent;
+    private ManualResetEvent _resetEvent;
+    private List<AutoResetEvent> _handlerEvents;
 
     private int _clientsAmount = 0;
     
@@ -36,7 +38,8 @@ public class Server : MonoBehaviour
         _serverThread = new Thread(AcceptClients);
         _serverThread.Start();
 
-        _resetEvent = new AutoResetEvent(false);
+        _resetEvent = new ManualResetEvent(false);
+        _handlerEvents = new List<AutoResetEvent>();
         
         ipText.text = GetLocalIPAddress();
     }
@@ -58,13 +61,15 @@ public class Server : MonoBehaviour
             {
                 TcpClient client = _server.AcceptTcpClient();
                 clientsText.text += client.Client + " connected\n";
+                Debug.Log(client.Client + " accepted");
                 ClientHandler handler = gameObject.AddComponent<ClientHandler>();
                 
                 _drawnTanks.Add(new List<GameObject>());
                 _drawnMissiles.Add(new List<GameObject>());
                 
-                handler.Initialize(client, _resetEvent, _clientsAmount++);
+                handler.Initialize(client, _resetEvent ,_clientsAmount++);
                 _clientHandlers.Add(handler);
+                _handlerEvents.Add(handler.ResetEvent);
             }
             catch (Exception e)
             {
@@ -76,6 +81,15 @@ public class Server : MonoBehaviour
 
     private void SendData()
     {
+        //Debug.Log("SERVER: START WAITING FOR HANDLERS TO SEND DATA");
+        foreach (AutoResetEvent resetEvent in _handlerEvents)
+        {
+            resetEvent.WaitOne();
+        }
+        //Debug.Log("SERVER: START PREPARING DATA FOR HANDLERS");
+
+        _resetEvent.Reset();
+        
         foreach (ClientHandler handler in _clientHandlers)
         {
             foreach (ClientHandler handler2 in _clientHandlers)
@@ -83,16 +97,17 @@ public class Server : MonoBehaviour
                 if (handler != handler2)
                 {
                     if(handler2.ReceivedData != null)
-                        handler.DataToSend.Add(handler2.ReceivedData);
+                        handler.AddDataToSend(handler2.ReceivedData);
+                    
                 }
             }
+            //Debug.Log("SERVER: " + handler.DataToSend.Count + " OF DATAS WILL BE SEND TO client");
         }
         _resetEvent.Set();
     }
 
     private void DrawData()
     {
-        //receivedText.text = handler.ReceivedData == null? "NUll received" : "Normal data";
         foreach (ClientHandler handler in _clientHandlers)
         {
             DrawTanks(handler);
@@ -165,19 +180,26 @@ public class Server : MonoBehaviour
             Console.WriteLine("Exception in SendGameStartMessage: " + e.Message);
         }
     }
-    
     private String GetLocalIPAddress()
     {
-        var host = Dns.GetHostEntry(Dns.GetHostName());
-        foreach (var ip in host.AddressList)
+        foreach (NetworkInterface ni in NetworkInterface.GetAllNetworkInterfaces())
         {
-            if (ip.AddressFamily == AddressFamily.InterNetwork)
+            // Check for Ethernet and Wi-Fi network interfaces
+            if ((ni.NetworkInterfaceType == NetworkInterfaceType.Ethernet || ni.NetworkInterfaceType == NetworkInterfaceType.Wireless80211) && ni.OperationalStatus == OperationalStatus.Up)
             {
-                return ip.ToString();
+                var ipProperties = ni.GetIPProperties();
+                foreach (var ip in ipProperties.UnicastAddresses)
+                {
+                    if (ip.Address.AddressFamily == AddressFamily.InterNetwork)
+                    {
+                        return ip.Address.ToString();
+                    }
+                }
             }
         }
         throw new Exception("No network adapters with an IPv4 address in the system!");
     }
+
     private void Shutdown()
     {
         if (_isAccepting)
