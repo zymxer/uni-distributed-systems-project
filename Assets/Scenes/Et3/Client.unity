@@ -3254,10 +3254,11 @@ MonoBehaviour:
   teamInputField: {fileID: 1947222131}
   connectionResult: {fileID: 2064097251}
   sending: {fileID: 1764127506}
+  sendingText: 
   gamePanel: {fileID: 1430047862}
   startPanel: {fileID: 685728983}
-  tank: {fileID: 4022219701344405834, guid: 1691b7cd778810049a12c74e0efdc77d, type: 3}
-  missile: {fileID: 6846469994789977895, guid: 031020d74b40a814198867846cefa528, type: 3}
+  tank: {fileID: 4022219701344405834, guid: 4262c60ed66fec14a818ed7acbf675f0, type: 3}
+  missile: {fileID: 6846469994789977895, guid: 85e26a1b5be2cca468c9b993eb90bab4, type: 3}
 --- !u!1 &1600873616
 GameObject:
   m_ObjectHideFlags: 0

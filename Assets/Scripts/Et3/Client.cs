@@ -35,8 +35,8 @@ public class Client : MonoBehaviour
     private bool _gameStarted = false;
     private AutoResetEvent _resetEvent;
     
-    private List<List<GameObject>> _drawnTanks;
-    private List<List<GameObject>> _drawnMissiles;
+    private List<GameObject> _drawnTanks;
+    private List<GameObject> _drawnMissiles;
     void Start()
     {
         _dataToSend = new ClientData();
@@ -54,7 +54,7 @@ public class Client : MonoBehaviour
         
         PrepareSendData();
         _resetEvent.Set();
-
+        DrawData();
         sending.text = sendingText;
     }
 
@@ -93,6 +93,51 @@ public class Client : MonoBehaviour
         }
         _dataToSend.Set(_team.Color, _team.TeamNumber, tanksData, missilesData);
     }
+    private void DrawData()
+    {
+        foreach (ClientData data in _receivedData)
+        {
+            DrawTanks(data);
+            DrawMissiles(data);
+        }
+    }
+
+    private void DrawTanks(ClientData data)
+    {
+        List<ObjectData> tanksData = data.Tanks;
+        Color teamColor = data.TeamColor;
+        List<GameObject> drawnList = _drawnTanks;
+        int teamNumber = data.TeamNumber;
+        for (int i = 0; i < tanksData.Count; i++)
+        {
+            if (drawnList.Count <= i)
+            {
+                drawnList.Add(Instantiate(tank, Vector3.zero, Quaternion.identity));
+            }
+
+            drawnList[i].transform.position = tanksData[i].Position;
+            drawnList[i].transform.rotation = tanksData[i].Rotation;
+            drawnList[i].transform.GetChild(0).gameObject.GetComponent<SpriteRenderer>().color = teamColor;
+            drawnList[i].SetActive(tanksData[i].Active);
+            drawnList[i].GetComponent<Tank>().TeamNumber = teamNumber;
+        }
+    }
+    private void DrawMissiles(ClientData data)
+    {
+        List<ObjectData> missilesData = data.Missiles;
+        List<GameObject> drawnList = _drawnMissiles;
+        for (int i = 0; i < missilesData.Count; i++)
+        {
+            if (drawnList.Count <= i)
+            {
+                drawnList.Add(Instantiate(missile, Vector3.zero, Quaternion.identity));
+            }
+
+            drawnList[i].transform.position = missilesData[i].Position;
+            drawnList[i].transform.rotation = missilesData[i].Rotation;
+            drawnList[i].SetActive(missilesData[i].Active);
+        }
+    }
     
     private void ReadData()
     {
@@ -117,9 +162,7 @@ public class Client : MonoBehaviour
             }
             if (bytesRead == dataSize)
             {
-                
                 string json = System.Text.Encoding.UTF8.GetString(data);
-                
                 _receivedData = JsonUtility.FromJson<List<ClientData>>(json);
             }
         }

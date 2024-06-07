@@ -151,7 +151,16 @@ public class Tank : MonoBehaviour
         flag.GetComponent<SpriteRenderer>().color = teamColor;
     }
 
-    public int TeamNumber => teamNumber;
+    public int TeamNumber {
+        get
+        {
+            return teamNumber;
+        }
+        set
+        {
+            teamNumber = value;
+        }
+    }
     public bool Active => active;
     public bool IsDefender => _isDefender;
     public bool IsTriggered => _triggered;
