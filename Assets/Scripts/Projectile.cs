@@ -33,15 +33,18 @@ public class Projectile : MonoBehaviour
             
             if (firstHit)
             {
-                Destroy(other.gameObject);
-                Destroy(gameObject);
+                other.gameObject.SetActive(false);
+                gameObject.SetActive(false);
+                //Destroy(other.gameObject);
+                //Destroy(gameObject);
             }
             else
                 firstHit = true;
         }
         else
         {
-            Destroy(gameObject);
+            gameObject.SetActive(false);
+            //Destroy(gameObject);
         }
     }
 }
